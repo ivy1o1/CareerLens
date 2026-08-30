@@ -1,7 +1,8 @@
-import fitz
+import pymupdf
 from fastapi import FastAPI,UploadFile
 from pydantic import BaseModel
 from dotenv import load_dotenv
+from google import genai
 import os
 app = FastAPI()
 
@@ -19,11 +20,12 @@ def get_jobs():
 @app.post("/upload-resume")
 async def upload_resume(file:UploadFile):
     contents = await file.read()
-    document = fitz.open(stream=contents, filetype="pdf")
+    document = pymupdf.open(stream=contents, filetype="pdf")
     text =""
     for page in document:
         text+=page.get_text()
-    return {"text":text}
+    result=extract_resume_data(text)
+    return result
 
 class User(BaseModel):
     name:str
@@ -35,48 +37,68 @@ def create_user(user:User):
     ]
 
 
-class Education(BAseModel):
+class Education(BaseModel):
     degree:str
     institution: str
-    major = str
-    start_date: str
-    end_date: str
-    gpa: str
+    field_of_study: str | None = None
+    start_date: str | None = None
+    end_date: str | None = None
+    gpa: str | None = None
 
 class Experience(BaseModel):
     role: str
     company: str
-    start_date: str
-    end_date: str
-    description: str
+    start_date: str | None = None
+    end_date: str | None = None
+    description: str | None = None
 
 class Project(BaseModel):
     name: str
     description: str
     technologies: str
 
-class Certifications(BaseModel):
+class Certification(BaseModel):
     name: str
-    issuer: str
-    date: str
+    issuer: str | None = None
+    date: str | None = None
 
-class Achievements(BaseModel):
+class Achievement(BaseModel):
     title: str
-    description: str
+    description: str | None = None
 
 class PersonalInfo(BaseModel):
     name: str
-    email: str
-    phone: str
+    email: str | None = None
+    phone: str | None = None
 
 class Resume(BaseModel):
     personal_info: PersonalInfo
-    educaion: list[Education]
+    education: list[Education]
     skills: list[str]
     experience:list[Experience]
     projects: list[Project]
-    certifications: list[Certifications]
-    achievements: list[Achievements]
+    certifications: list[Certification]
+    achievements: list[Achievement]
+
 
 load_dotenv()
 api_key=os.getenv("GEMINI_API_KEY")
+print("API key found:", api_key is not None)
+client = genai.Client(api_key=api_key)
+
+def extract_resume_data(text:str):
+    prompt = f"""
+    Extract the information from this resume.
+
+    Resume text:
+    {text}
+    """
+    response = client.models.generate_content(
+    model="gemini-2.5-flash",
+    contents=prompt,
+    config={
+        "response_mime_type":"application/json",
+        "response_schema": Resume,
+    })
+    return response.parsed
+
