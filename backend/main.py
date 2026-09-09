@@ -6,6 +6,7 @@ from google import genai
 import os
 from database import supabase
 from database import save_resume
+from fastapi import HTTPException
 from models import(
     Resume,
 )
@@ -57,7 +58,58 @@ def get_resume(resume_id : str):
         .eq("id", resume_id)
         .execute()
     )
-    return response.data
+    if not response.data:
+        raise HTTPException(
+            status_code=404,
+            detail="resume not found"
+        )
+    return response.data[0]
 
+@app.delete("/resumes/{resume_id}")
+def delete_resume(resume_id: str):
+    response= (
+        supabase
+        .table("resumes")
+        .delete()
+        .eq("id",resume_id)
+        .execute()
+    )
+    if not response.data:
+        raise HTTPException(
+            status_code=404,
+            detail="resume not found"
+        )
+    return {"message":"Resume deleted successfully"}
 
-
+@app.put("/resumes/{resume_id}")
+def update_resume(
+    resume_id: str,
+    name: str | None = None,
+    email: str | None = None,
+    phone: str | None=None
+):
+    data={}
+    if name is not None:
+        data["name"]=name
+    if email is not None:
+        data["email"]=email
+    if phone is not None:
+        data["phone"]=phone
+    if not data:
+        raise HTTPException(
+            status_code=404,
+            detail="No fields provided for update"
+        )
+    response = (
+        supabase
+        .table("resumes")
+        .update(data)
+        .eq("id",resume_id)
+        .execute()
+    )
+    if not response.data:
+        raise HTTPException(
+            status_code=404,
+            detail="Resume not found"
+        )
+    return response.data[0]
