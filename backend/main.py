@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 from google import genai
 import os
+from database import supabase
 from database import save_resume
 from models import(
     Resume,
@@ -42,7 +43,21 @@ def create_user(user:User):
         {"message":f"User {user.name} received."}
     ]
 
+@app.get("/resumes")
+def get_resumes():
+    response = supabase.table("resumes").select('*').execute()
+    return response
 
+@app.get("/resumes/{resume_id}")
+def get_resume(resume_id : str):
+    response = (
+        supabase
+        .table("resumes")
+        .select("*")
+        .eq("id", resume_id)
+        .execute()
+    )
+    return response.data
 
 
 
