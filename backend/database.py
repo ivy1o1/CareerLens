@@ -6,3 +6,20 @@ load_dotenv()
 supabase_url = os.getenv("SUPABASE_URL")
 supabase_key= os.getenv("SUPABASE_KEY")
 supabase = create_client(supabase_url,supabase_key)
+
+def save_resume(resume):
+    data = {
+        "name": resume.personal_info.name,
+        "email": resume.personal_info.email,
+        "phone": resume.personal_info.phone,
+        "education": [item.model_dump() for item in resume.education],
+        "skills": resume.skills.model_dump(),
+        "experience": [item.model_dump() for item in resume.experience],
+        "projects": [item.model_dump() for item in resume.projects],
+        "certifications": [item.model_dump() for item in resume.certifications],
+        "achievements": [item.model_dump() for item in resume.achievements],
+    }
+
+    response = supabase.table("resumes").insert(data).execute()
+
+    return response.data

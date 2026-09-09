@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 from google import genai
 import os
+from database import save_resume
 from models import(
     Resume,
 )
@@ -29,7 +30,8 @@ async def upload_resume(file:UploadFile):
     for page in document:
         text+=page.get_text()
     result=extract_resume_data(text)
-    return result
+    saved_resume = save_resume(result)
+    return saved_resume
 
 class User(BaseModel):
     name:str
