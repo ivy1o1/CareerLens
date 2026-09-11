@@ -46,3 +46,12 @@ class Resume(BaseModel):
     projects: list[Project]
     certifications: list[Certification]
     achievements: list[Achievement]
+
+class Job(BaseModel):
+    title: str
+    company: str
+    description: str | None = None
+    required_skills: list[str] = []
+    location: str | None = None
+    job_type: str | None = None
+    application_url: str | None = None

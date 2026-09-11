@@ -4,11 +4,11 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 from google import genai
 import os
-from database import supabase
-from database import save_resume
+from database import save_job, supabase, save_resume
 from fastapi import HTTPException
 from models import(
     Resume,
+    Job
 )
 from resume_parser import extract_resume_data
 app = FastAPI()
@@ -19,10 +19,28 @@ def home():
 
 @app.get("/jobs")
 def get_jobs():
-    return [
-        {"title":"AI/ML Intern", "company":"Example Corp"},
-        {"title":"Backend Intern","company":"Tech company"}
-    ]
+    response = supabase.table("jobs").select("*").execute()
+    return response.data
+
+@app.post("/jobs")
+def create_job(job: Job):
+    return save_job(job.model_dump())
+
+@app.get("/jobs/{job_id}")
+def get_job(job_id: str):
+    response = (
+        supabase
+        .table("jobs")
+        .select("*")
+        .eq("id",job_id)
+        .execute()
+    )
+    if not response.data:
+        raise HTTPException(
+            status_code=404,
+            detail="Job not found"
+        )
+    return response.data[0]
 
 @app.post("/upload-resume")
 async def upload_resume(file:UploadFile):
@@ -113,3 +131,4 @@ def update_resume(
             detail="Resume not found"
         )
     return response.data[0]
+

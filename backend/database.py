@@ -23,3 +23,18 @@ def save_resume(resume):
     response = supabase.table("resumes").insert(data).execute()
 
     return response.data
+
+def save_job(job):
+    data = {
+        "title": job["title"],
+        "company": job["company"],
+        "description": job.get("description"),
+        "required_skills": job.get("required_skills", []),
+        "location": job.get("location"),
+        "job_type": job.get("job_type"),
+        "application_url": job.get("application_url"),
+    }
+
+    response = supabase.table("jobs").insert(data).execute()
+
+    return response.data
