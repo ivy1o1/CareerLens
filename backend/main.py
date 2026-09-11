@@ -17,6 +17,8 @@ app = FastAPI()
 def home():
     return {"message" : "CareerLens is working"}
 
+#job retrieval and creation endpoints
+
 @app.get("/jobs")
 def get_jobs():
     response = supabase.table("jobs").select("*").execute()
@@ -41,6 +43,8 @@ def get_job(job_id: str):
             detail="Job not found"
         )
     return response.data[0]
+
+#resume CRUD endpoints
 
 @app.post("/upload-resume")
 async def upload_resume(file:UploadFile):
@@ -132,3 +136,60 @@ def update_resume(
         )
     return response.data[0]
 
+#MATCHING THE RESUME WITH JOBS AND RETURNING THE MATCH SCORE AND MISSING SKILLS
+
+@app.post("/match/{resume_id}/{job_id}")
+def match_resume_with_job(resume_id: str, job_id: str):
+    resume_response =(
+        supabase
+        .table("resumes")
+        .select("*")
+        .eq("id",resume_id)
+        .execute()
+    )
+    if not resume_response.data:
+        raise HTTPException(
+            status_code=404,
+            detail="Resume not found"
+        )
+    resume = resume_response.data[0]
+
+    job_response = (
+        supabase
+        .table("jobs")
+        .select("*")
+        .eq("id",job_id)
+        .execute()
+    )
+    if not job_response.data:
+        raise HTTPException(
+            status_code=404,
+            detail="Job not found"
+        )
+    job = job_response.data[0]
+
+    resume_skills = resume["skills"]["technical"] + resume["skills"]["tools"] + resume["skills"]["soft"]
+    norm_res_skills = set()
+    for skill in resume_skills:
+        norm_res_skills.add(skill.lower().strip())
+
+    required_skills = job["required_skills"]
+    norm_job_skills = set()
+    for skill in required_skills:
+        norm_job_skills.add(skill.lower().strip())
+
+    matched_skills = norm_res_skills.intersection(norm_job_skills)
+    missing_skills = norm_job_skills.difference(norm_res_skills)
+
+    if norm_job_skills:
+        match_score =(len(matched_skills) / len(norm_job_skills))* 100
+    else:
+        match_score = 0
+
+    return {
+        "resume_id": resume_id,
+        "job_id": job_id,
+        "matched_skills": sorted(matched_skills),
+        "missing_skills": sorted(missing_skills),
+        "match_score": round(match_score,2)
+    }
