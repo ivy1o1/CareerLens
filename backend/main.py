@@ -11,6 +11,9 @@ from models import(
     Job
 )
 from resume_parser import extract_resume_data
+from text_builder import build_resume_text, build_job_text
+from embeddings import get_embedding, cosine_similarity
+
 app = FastAPI()
 
 @app.get("/")
@@ -167,6 +170,18 @@ def match_resume_with_job(resume_id: str, job_id: str):
             detail="Job not found"
         )
     job = job_response.data[0]
+    
+    resume_text = build_resume_text(resume)
+    job_text = build_job_text(job)
+
+    resume_embedding = get_embedding(resume_text)
+    job_embedding = get_embedding(job_text)
+
+    semantic_similarity = cosine_similarity(
+        resume_embedding,
+        job_embedding
+    )
+    semantic_score =semantic_similarity * 100
 
     resume_skills = resume["skills"]["technical"] + resume["skills"]["tools"] + resume["skills"]["soft"]
     norm_res_skills = set()
@@ -191,5 +206,6 @@ def match_resume_with_job(resume_id: str, job_id: str):
         "job_id": job_id,
         "matched_skills": sorted(matched_skills),
         "missing_skills": sorted(missing_skills),
-        "match_score": round(match_score,2)
+        "match_score": round(match_score,2),
+        "semantic_score": round(semantic_score, 2)
     }
