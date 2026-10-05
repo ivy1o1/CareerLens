@@ -3,6 +3,7 @@ import json
 
 from dotenv import load_dotenv
 from google import genai
+from pydantic import BaseModel, Field
 
 
 load_dotenv()
@@ -15,16 +16,23 @@ if not api_key:
 client = genai.Client(api_key=api_key)
 
 
+class EvaluationResult(BaseModel):
+    matched: bool
+    confidence: float = Field(ge=0.0, le=1.0)
+    reason: str
+    evidence: str | None
+
+
 def evaluate_requirement(
     requirement: str,
     retrieved_evidence: list[dict]
 ):
     """
-    Use Gemini to decide whether retrieved resume evidence
+    Decide whether retrieved resume evidence
     actually satisfies a job requirement.
     """
 
-    # No evidence → no need to call Gemini
+    # No evidence → don't call Gemini
     if not retrieved_evidence:
         return {
             "requirement": requirement,
@@ -47,8 +55,7 @@ def evaluate_requirement(
         })
 
     prompt = f"""
-You are evaluating whether a candidate's resume evidence
-satisfies a job requirement.
+Evaluate whether the supplied resume evidence satisfies the job requirement.
 
 JOB REQUIREMENT:
 {requirement}
@@ -58,41 +65,27 @@ RESUME EVIDENCE:
 
 RULES:
 1. Use ONLY the supplied resume evidence.
-2. Do not invent experience, skills, or qualifications.
-3. Semantic similarity alone does NOT prove qualification.
-4. The evidence must actually support the requirement.
-5. If the evidence is insufficient or only loosely related, return matched=false.
+2. Do not invent skills, experience, or qualifications.
+3. Semantic similarity does not prove qualification.
+4. The evidence must directly support the requirement.
+5. If the evidence is insufficient or only loosely related, matched must be false.
 6. Keep the reason short and factual.
-
-Return ONLY valid JSON in this exact format:
-
-{{
-    "matched": true,
-    "confidence": 0.95,
-    "reason": "The candidate explicitly demonstrates the required skill.",
-    "evidence": "The strongest supporting evidence."
-}}
+7. evidence must contain the strongest supporting resume evidence,
+   or null if there is no supporting evidence.
 """
 
     response = client.models.generate_content(
         model="gemini-2.5-flash",
-        contents=prompt
+        contents=prompt,
+        config={
+            "response_mime_type": "application/json",
+            "response_schema": EvaluationResult,
+        },
     )
 
-    # Gemini may wrap JSON inside ```json ... ```
-    response_text = response.text.strip()
-
-    if response_text.startswith("```"):
-        response_text = response_text.replace("```json", "", 1)
-        response_text = response_text.replace("```", "", 1)
-        response_text = response_text.strip()
-
-    result = json.loads(response_text)
+    result = EvaluationResult.model_validate_json(response.text)
 
     return {
         "requirement": requirement,
-        "matched": result["matched"],
-        "confidence": result["confidence"],
-        "reason": result["reason"],
-        "evidence": result["evidence"]
+        **result.model_dump()
     }

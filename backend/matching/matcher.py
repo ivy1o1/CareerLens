@@ -70,3 +70,33 @@ def retrieve_evidence(
     )
 
     return results[:top_k]
+
+
+def match_requirements(
+    requirements: list[str],
+    evidence: list[dict]
+):
+    """
+    Match every job requirement against resume evidence.
+
+    Retrieval happens first.
+    Gemini evaluation happens second.
+    """
+
+    results = []
+
+    for requirement in requirements:
+
+        retrieved_evidence = retrieve_evidence(
+            requirement,
+            evidence
+        )
+
+        evaluation = evaluate_requirement(
+            requirement,
+            retrieved_evidence
+        )
+
+        results.append(evaluation)
+
+    return results
