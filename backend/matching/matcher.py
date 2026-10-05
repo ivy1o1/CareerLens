@@ -5,24 +5,23 @@ from matching.normalizer import normalize_skill
 def retrieve_evidence(
     requirement: str,
     evidence: list[dict],
-    top_k: int = 3
+    top_k: int = 3,
+    min_similarity: float = 0.4
 ):
     """
-    Retrieve the most relevant resume evidence for a job requirement.
+    Retrieve the strongest relevant resume evidence.
 
-    This function does NOT decide whether the candidate qualifies.
-    It only finds potentially relevant evidence.
+    The retriever finds potentially useful evidence.
+    It does NOT decide whether the candidate qualifies.
     """
 
     if not evidence:
         return []
 
     normalized_requirement = normalize_skill(requirement)
-
-    # Exact matches should always rank first.
-    scored_evidence = []
-
     requirement_embedding = get_embedding(requirement)
+
+    scored_evidence = {}
 
     for item in evidence:
         text = item.get("text", "").strip()
@@ -45,16 +44,29 @@ def retrieve_evidence(
 
             match_type = "semantic"
 
-        scored_evidence.append({
-            "evidence": item,
-            "similarity": round(float(similarity), 4),
-            "match_type": match_type
-        })
+        similarity = float(similarity)
 
-    # Highest similarity first
-    scored_evidence.sort(
+        # Ignore obviously weak candidates
+        if similarity < min_similarity:
+            continue
+
+        # Keep only the strongest occurrence of duplicate evidence
+        existing = scored_evidence.get(normalized_text)
+
+        result = {
+            "evidence": item,
+            "similarity": round(similarity, 4),
+            "match_type": match_type
+        }
+
+        if existing is None or similarity > existing["similarity"]:
+            scored_evidence[normalized_text] = result
+
+    results = list(scored_evidence.values())
+
+    results.sort(
         key=lambda item: item["similarity"],
         reverse=True
     )
 
-    return scored_evidence[:top_k]
+    return results[:top_k]
