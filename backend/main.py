@@ -2,8 +2,7 @@ import pymupdf
 from fastapi import FastAPI,UploadFile
 from pydantic import BaseModel
 from dotenv import load_dotenv
-from google import genai
-import os
+
 from database import save_job, supabase, save_resume
 from fastapi import HTTPException
 from models import(
