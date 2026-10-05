@@ -30,7 +30,12 @@ def get_embedding(text):
 
     embedding = sum_embeddings / sum_mask
 
-    return embedding[0]
+    embedding = embedding[0]
+
+    embedding = embedding / np.linalg.norm(embedding)
+
+    return embedding
+ 
 
 def cosine_similarity(embedding_a, embedding_b):
     return np.dot(embedding_a, embedding_b) / (
