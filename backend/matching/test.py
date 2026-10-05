@@ -1,5 +1,5 @@
 from matching.evidence import build_resume_evidence
-from matching.matcher import match_requirement
+from matching.matcher import retrieve_evidence
 
 
 resume = {
@@ -41,14 +41,19 @@ requirements = [
 ]
 
 for requirement in requirements:
-    result = match_requirement(
+    results = retrieve_evidence(
         requirement,
         evidence,
-        threshold=0.6
+        top_k=3
     )
 
-    print("\nRequirement:", result["requirement"])
-    print("Matched:", result["matched"])
-    print("Match type:", result["match_type"])
-    print("Similarity:", result["similarity"])
-    print("Evidence:", result["evidence"])
+    print("\nRequirement:", requirement)
+
+    for result in results:
+        print(
+            result["similarity"],
+            "|",
+            result["match_type"],
+            "|",
+            result["evidence"]["text"]
+        )
