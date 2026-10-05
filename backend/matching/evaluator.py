@@ -7,9 +7,12 @@ from google import genai
 
 load_dotenv()
 
-client = genai.Client(
-    api_key=os.getenv("GEMINI_API_KEY")
-)
+api_key = os.getenv("GEMINI_API_KEY")
+
+if not api_key:
+    raise RuntimeError("GEMINI_API_KEY is not set in .env")
+
+client = genai.Client(api_key=api_key)
 
 
 def evaluate_requirement(
@@ -19,11 +22,9 @@ def evaluate_requirement(
     """
     Use Gemini to decide whether retrieved resume evidence
     actually satisfies a job requirement.
-
-    The LLM can only use the supplied evidence.
     """
 
-    # 1. Nothing was retrieved → no LLM call
+    # No evidence → no need to call Gemini
     if not retrieved_evidence:
         return {
             "requirement": requirement,
@@ -33,7 +34,6 @@ def evaluate_requirement(
             "evidence": None
         }
 
-    # 2. Prepare evidence for the LLM
     evidence_text = []
 
     for item in retrieved_evidence:
@@ -74,16 +74,21 @@ Return ONLY valid JSON in this exact format:
 }}
 """
 
-    # 3. Ask Gemini to evaluate
     response = client.models.generate_content(
         model="gemini-2.5-flash",
         contents=prompt
     )
 
-    # 4. Convert Gemini's JSON response into Python
-    result = json.loads(response.text)
+    # Gemini may wrap JSON inside ```json ... ```
+    response_text = response.text.strip()
 
-    # 5. Add the requirement back to our result
+    if response_text.startswith("```"):
+        response_text = response_text.replace("```json", "", 1)
+        response_text = response_text.replace("```", "", 1)
+        response_text = response_text.strip()
+
+    result = json.loads(response_text)
+
     return {
         "requirement": requirement,
         "matched": result["matched"],

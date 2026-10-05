@@ -1,6 +1,6 @@
 from matching.evidence import build_resume_evidence
 from matching.matcher import retrieve_evidence
-
+from matching.evaluator import evaluate_requirement
 
 resume = {
     "skills": {
@@ -41,19 +41,29 @@ requirements = [
 ]
 
 for requirement in requirements:
-    results = retrieve_evidence(
+
+    retrieved = retrieve_evidence(
         requirement,
         evidence,
         top_k=3
     )
 
+    result = evaluate_requirement(
+        requirement,
+        retrieved
+    )
+
     print("\nRequirement:", requirement)
 
-    for result in results:
+    print("Retrieved evidence:")
+    for item in retrieved:
         print(
-            result["similarity"],
+            item["similarity"],
             "|",
-            result["match_type"],
+            item["match_type"],
             "|",
-            result["evidence"]["text"]
+            item["evidence"]["text"]
         )
+
+    print("LLM evaluation:")
+    print(result)
