@@ -1,14 +1,10 @@
 import pymupdf
 from fastapi import FastAPI,UploadFile
 from pydantic import BaseModel
-from dotenv import load_dotenv
 
 from database import save_job, supabase, save_resume
 from fastapi import HTTPException
-from models import(
-    Resume,
-    Job
-)
+from models import Job
 from resume_parser import extract_resume_data
 from matching.evidence import build_resume_evidence
 from matching.matcher import match_requirements
@@ -72,7 +68,7 @@ def create_user(user:User):
 @app.get("/resumes")
 def get_resumes():
     response = supabase.table("resumes").select('*').execute()
-    return response
+    return response.data
 
 @app.get("/resumes/{resume_id}")
 def get_resume(resume_id : str):
