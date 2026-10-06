@@ -9,11 +9,13 @@ from models import Resume
 load_dotenv()
 
 api_key = os.getenv("GEMINI_API_KEY")
+if not api_key:
+    raise RuntimeError("GEMINI_API_KEY is not set in .env")
 
 client = genai.Client(api_key=api_key)
 
 
-def extract_resume_data(text: str):
+def extract_resume_data(text: str) -> Resume:
     prompt = f"""
     Extract information from this resume and return it according to the provided schema.
 
