@@ -10,8 +10,9 @@ from models import(
     Job
 )
 from resume_parser import extract_resume_data
-from text_builder import build_resume_text, build_job_text
-from embeddings import get_embedding, cosine_similarity
+from matching.evidence import build_resume_evidence
+from matching.matcher import match_requirements
+
 
 app = FastAPI()
 
@@ -142,69 +143,78 @@ def update_resume(
 
 @app.post("/match/{resume_id}/{job_id}")
 def match_resume_with_job(resume_id: str, job_id: str):
-    resume_response =(
+
+    # Get resume
+    resume_response = (
         supabase
         .table("resumes")
         .select("*")
-        .eq("id",resume_id)
+        .eq("id", resume_id)
         .execute()
     )
+
     if not resume_response.data:
         raise HTTPException(
             status_code=404,
             detail="Resume not found"
         )
+
     resume = resume_response.data[0]
 
+    # Get job
     job_response = (
         supabase
         .table("jobs")
         .select("*")
-        .eq("id",job_id)
+        .eq("id", job_id)
         .execute()
     )
+
     if not job_response.data:
         raise HTTPException(
             status_code=404,
             detail="Job not found"
         )
+
     job = job_response.data[0]
-    
-    resume_text = build_resume_text(resume)
-    job_text = build_job_text(job)
 
-    resume_embedding = get_embedding(resume_text)
-    job_embedding = get_embedding(job_text)
+    # Build structured resume evidence
+    evidence = build_resume_evidence(resume)
 
-    semantic_similarity = cosine_similarity(
-        resume_embedding,
-        job_embedding
+    # Match every job requirement
+    requirement_results = match_requirements(
+        job["required_skills"],
+        evidence
     )
-    semantic_score =semantic_similarity * 100
 
-    resume_skills = resume["skills"]["technical"] + resume["skills"]["tools"] + resume["skills"]["soft"]
-    norm_res_skills = set()
-    for skill in resume_skills:
-        norm_res_skills.add(skill.lower().strip())
+    # Separate matched and missing requirements
+    matched_skills = [
+        result["requirement"]
+        for result in requirement_results
+        if result["matched"]
+    ]
 
-    required_skills = job["required_skills"]
-    norm_job_skills = set()
-    for skill in required_skills:
-        norm_job_skills.add(skill.lower().strip())
+    missing_skills = [
+        result["requirement"]
+        for result in requirement_results
+        if not result["matched"]
+    ]
 
-    matched_skills = norm_res_skills.intersection(norm_job_skills)
-    missing_skills = norm_job_skills.difference(norm_res_skills)
+    # Calculate requirement-based match score
+    total_requirements = len(requirement_results)
 
-    if norm_job_skills:
-        match_score =(len(matched_skills) / len(norm_job_skills))* 100
+    if total_requirements:
+        match_score = (
+            len(matched_skills) / total_requirements
+        ) * 100
     else:
         match_score = 0
 
     return {
         "resume_id": resume_id,
         "job_id": job_id,
-        "matched_skills": sorted(matched_skills),
-        "missing_skills": sorted(missing_skills),
-        "match_score": round(match_score,2),
-        "semantic_score": round(semantic_score, 2)
+        "matched_skills": matched_skills,
+        "missing_skills": missing_skills,
+        "match_score": round(match_score, 2),
+        "requirements": requirement_results
     }

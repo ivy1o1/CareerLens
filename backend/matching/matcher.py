@@ -1,6 +1,6 @@
 from embeddings import get_embedding, cosine_similarity
 from matching.normalizer import normalize_skill
-
+from matching.evaluator import evaluate_requirement
 
 def retrieve_evidence(
     requirement: str,
