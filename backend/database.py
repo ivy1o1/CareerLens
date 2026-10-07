@@ -2,12 +2,18 @@ import os
 from dotenv import load_dotenv
 from supabase import create_client
 
+from models import Resume
+
 load_dotenv()
 supabase_url = os.getenv("SUPABASE_URL")
-supabase_key= os.getenv("SUPABASE_KEY")
-supabase = create_client(supabase_url,supabase_key)
+supabase_key = os.getenv("SUPABASE_KEY")
 
-def save_resume(resume):
+if not supabase_url or not supabase_key:
+    raise RuntimeError("SUPABASE_URL and SUPABASE_KEY must be set in .env")
+
+supabase = create_client(supabase_url, supabase_key)
+
+def save_resume(resume: Resume):
     data = {
         "name": resume.personal_info.name,
         "email": resume.personal_info.email,
@@ -24,7 +30,7 @@ def save_resume(resume):
 
     return response.data
 
-def save_job(job):
+def save_job(job: dict):
     data = {
         "title": job["title"],
         "company": job["company"],
