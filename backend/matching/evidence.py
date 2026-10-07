@@ -1,4 +1,4 @@
-def build_resume_evidence(resume: dict):
+def build_resume_evidence(resume: dict) -> list[dict]:
     evidence = []
 
     # Skills
@@ -17,6 +17,13 @@ def build_resume_evidence(resume: dict):
             "text": tool,
             "source_name": None
         })
+        for skill in skills.get("soft", []):
+            evidence.append({
+            "source_type": "soft_skill",
+            "text": skill,
+            "source_name": None
+        })
+        
 
     # Experience
     for experience in resume.get("experience", []):
@@ -48,6 +55,32 @@ def build_resume_evidence(resume: dict):
                 "source_type": "project_technology",
                 "text": technology,
                 "source_name": project_name
+            })
+            
+    # Certifications
+    for certification in resume.get("certifications", []):
+        name = certification.get("name", "")
+        issuer = certification.get("issuer") or ""
+
+        if name:
+            evidence.append({
+                "source_type": "certification",
+                "text": name,
+                "source_name": issuer
+            })
+            
+    # Achievements
+    for achievement in resume.get("achievements", []):
+        title = achievement.get("title", "")
+        description = achievement.get("description") or ""
+
+        text = f"{title}: {description}".strip(": ")
+
+        if text:
+            evidence.append({
+                "source_type": "achievement",
+                "text": text,
+                "source_name": None
             })
 
     # Education

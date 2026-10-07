@@ -4,6 +4,7 @@ import json
 from dotenv import load_dotenv
 from google import genai
 from pydantic import BaseModel, Field
+from matching.matcher import retrieve_evidence
 
 
 load_dotenv()
@@ -89,3 +90,28 @@ RULES:
         "requirement": requirement,
         **result.model_dump()
     }
+    
+def evaluate_requirements(
+    requirements: list[str],
+    evidence: list[dict]
+):
+    """
+    Evaluate every job requirement against resume evidence.
+    """
+
+    results = []
+
+    for requirement in requirements:
+        retrieved_evidence = retrieve_evidence(
+            requirement,
+            evidence
+        )
+
+        result = evaluate_requirement(
+            requirement,
+            retrieved_evidence
+        )
+
+        results.append(result)
+
+    return results
