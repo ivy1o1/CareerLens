@@ -141,3 +141,6 @@ total requirements
 
 **Current scope: Resume ↔ Job matching.**
 
+
+
+V2 coming soon!
