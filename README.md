@@ -140,3 +140,8 @@ total requirements
 > **CareerLens analyzes what the candidate has actually demonstrated — it does not invent qualifications.**
 
 **Current scope: Resume ↔ Job matching.**
+
+
+
+V2 coming soon with other new features and will continue to scale up to many versions!
+Stay tuned.
