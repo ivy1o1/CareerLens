@@ -143,4 +143,5 @@ total requirements
 
 
 
-V2 coming soon!
+V2 coming soon with other new features and will continue to scale up to many versions!
+Stay tuned.
